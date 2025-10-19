@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>A.T.C ACADEMY | Register</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo"><img src="assets/logo.png" alt="logo" style="width:44px;height:44px;object-fit:cover;border-radius:6px"></div>
+      <div>
+        <div class="title">A.T.C ACADEMY</div>
+        <div class="small">Student Registration Portal</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <form id="regForm">
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Full Name</label>
+            <input required id="fullName" type="text" />
+          </div>
+          <div class="form-row">
+            <label>Email</label>
+            <input required id="email" type="email" />
+          </div>
+          <div class="form-row">
+            <label>Phone</label>
+            <input required id="phone" type="tel" />
+          </div>
+          <div class="form-row">
+            <label>Department</label>
+            <select id="department">
+              <option value="">Choose</option>
+              <option>Computer Science</option>
+              <option>Electrical Engineering</option>
+              <option>Cyber Security</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Course</label>
+            <input id="course" type="text" placeholder="e.g. CSC101" />
+          </div>
+          <div class="form-row">
+            <label>Year Started</label>
+            <input id="yearStart" type="text" placeholder="e.g. 2024" />
+          </div>
+          <div class="form-row">
+            <label>Year End (expected)</label>
+            <input id="yearEnd" type="text" placeholder="e.g. 2026" />
+          </div>
+          <div class="form-row">
+            <label>Password</label>
+            <input required id="password" type="password" />
+          </div>
+          <div class="form-row">
+            <label>Confirm Password</label>
+            <input required id="confirmPassword" type="password" />
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <button class="btn" type="submit">Register</button>
+          <a href="login.html" class="btn-ghost" style="margin-left:10px;padding:10px 12px">Login</a>
+        </div>
+        <div id="regMsg" class="note"></div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { registerStudent } from './script.js';
+
+    const form = document.getElementById('regForm');
+    const msg = document.getElementById('regMsg');
+
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      msg.textContent = "Processing...";
+      try{
+        const fullName = document.getElementById('fullName').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const department = document.getElementById('department').value;
+        const course = document.getElementById('course').value.trim();
+        const yearStart = document.getElementById('yearStart').value.trim();
+        const yearEnd = document.getElementById('yearEnd').value.trim();
+        const password = document.getElementById('password').value;
+        const confirm = document.getElementById('confirmPassword').value;
+        if(password !== confirm) throw new Error("Passwords do not match");
+        await registerStudent({fullName,email,phone,department,course,password,yearStart,yearEnd});
+        msg.innerHTML = '<span class="success">Registered! You can now <a href="login.html">Login</a>.</span>';
+        form.reset();
+      }catch(err){
+        msg.innerHTML = '<span class="error">'+ (err.message || err) +'</span>';
+      }
+    });
+  </script>
+</body>
+</html>

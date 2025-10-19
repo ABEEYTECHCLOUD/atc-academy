@@ -1,0 +1,98 @@
+// script.js (ES Module with Firebase v9 modular imports)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.24.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/9.24.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.24.0/firebase-firestore.js";
+import { getStorage, ref as sref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.24.0/firebase-storage.js";
+
+/* ====== FIREBASE CONFIG PLACEHOLDERS - REPLACE with your project's config ====== */
+const firebaseConfig = {
+  apiKey: "REPLACE_API_KEY",
+  authDomain: "REPLACE_AUTH_DOMAIN",
+  projectId: "REPLACE_PROJECT_ID",
+  storageBucket: "REPLACE_STORAGE_BUCKET",
+  messagingSenderId: "REPLACE_MESSAGING_SENDER_ID",
+  appId: "REPLACE_APP_ID"
+};
+/* ================================================================================= */
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+async function uploadFile(userId, file, folder){
+  if(!file) return null;
+  const path = `${folder}/${userId}-${Date.now()}-${file.name}`;
+  const storageRef = sref(storage, path);
+  const uploadTask = uploadBytesResumable(storageRef, file);
+  return new Promise((res, rej) => {
+    uploadTask.on('state_changed', ()=>{}, (err)=> rej(err), async ()=> {
+      const url = await getDownloadURL(uploadTask.snapshot.ref);
+      res(url);
+    });
+  });
+}
+
+export async function registerStudent({fullName,email,phone,department,course,password,yearStart,yearEnd}){
+  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  const uid = cred.user.uid;
+  await updateProfile(cred.user, { displayName: fullName });
+  const profileRef = doc(db, 'students', uid);
+  await setDoc(profileRef, {
+    fullName, email, phone, department, course,
+    yearStart, yearEnd,
+    createdAt: Date.now(),
+    paymentStatus: "Not Paid",
+    uploads: {}
+  });
+  return uid;
+}
+
+export async function loginStudent(email, password){
+  const cred = await signInWithEmailAndPassword(auth, email, password);
+  return cred.user;
+}
+
+export async function saveBio(uid, bioData, files){
+  const uploads = {};
+  if(files.passportFile) uploads.passportURL = await uploadFile(uid, files.passportFile, 'passports');
+  if(files.olevelFile) uploads.olevelURL = await uploadFile(uid, files.olevelFile, 'olevels');
+  if(files.certificateFile) uploads.certificateURL = await uploadFile(uid, files.certificateFile, 'certificates');
+  const profileRef = doc(db, 'students', uid);
+  await updateDoc(profileRef, { ...bioData, uploads, updatedAt: Date.now() });
+}
+
+export async function getProfile(uid){
+  const docRef = doc(db, 'students', uid);
+  const snap = await getDoc(docRef);
+  if(!snap.exists()) return null;
+  return snap.data();
+}
+
+export function onAuth(cb){
+  return onAuthStateChanged(auth, cb);
+}
+
+export async function logout(){
+  await signOut(auth);
+}
+
+/* Paystack example (client-side). Replace public key when ready and verify on server in production. */
+export function payWithPaystack(email, amountInNaira, ref){
+  const handler = window.PaystackPop && window.PaystackPop.setup ? window.PaystackPop.setup({
+    key: "REPLACE_PAYSTACK_PUBLIC_KEY",
+    email,
+    amount: amountInNaira * 100,
+    ref: ref || `ATC-${Date.now()}`,
+    onClose: function(){ alert('Payment window closed'); },
+    callback: function(response){ alert('Payment success. Reference: ' + response.reference); }
+  }) : null;
+  if(handler) handler.openIframe();
+  else alert("Paystack library not loaded or API key missing.");
+}
+
+export const courseCatalog = {
+  "Computer Science":[{code:"CSC101",title:"Intro to Computer Science"},{code:"CSC102",title:"Programming I"}],
+  "Electrical Engineering":[{code:"EEE101",title:"Circuit Theory I"},{code:"EEE102",title:"Electronics I"}],
+  "Cyber Security":[{code:"CYB101",title:"Intro to Cyber Security"},{code:"CYB102",title:"Network Security"}]
+};

@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>A.T.C ACADEMY | Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo"><img src="assets/logo.png" alt="logo" style="width:44px;height:44px;object-fit:cover;border-radius:6px"></div>
+      <div><div class="title">Student Dashboard</div><div class="small">Welcome</div></div>
+    </div>
+
+    <div id="profileCard" class="card">
+      <div id="profileContent">Loading profile...</div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="small">Course Fees</div>
+        <div><button id="payBtn" class="btn">Pay Course Fee</button></div>
+      </div>
+      <div id="payInfo" class="note"></div>
+    </div>
+
+    <div style="margin-top:12px">
+      <button id="logoutBtn" class="btn-ghost">Logout</button>
+      <a href="bio.html" class="btn" style="margin-left:10px">Edit Bio / Uploads</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { onAuth, getProfile, logout, payWithPaystack } from './script.js';
+    let uid = null, profile = null;
+    const profileContent = document.getElementById('profileContent');
+    const payInfo = document.getElementById('payInfo');
+    onAuth(async (user)=>{
+      if(!user) return location.href='login.html';
+      uid = user.uid;
+      profile = await getProfile(uid);
+      renderProfile(profile);
+    });
+
+    function renderProfile(p){
+      if(!p) { profileContent.innerHTML = '<div class="error">Profile not found</div>'; return; }
+      profileContent.innerHTML = `
+        <div style="display:flex;gap:14px;align-items:center">
+          <div style="width:96px;height:96px;border-radius:10px;background:#eef7ff;display:flex;align-items:center;justify-content:center">
+            ${ p.uploads && p.uploads.passportURL ? `<img src="${p.uploads.passportURL}" style="width:96px;height:96px;border-radius:8px;object-fit:cover">` : 'No Photo' }
+          </div>
+          <div>
+            <div style="font-weight:700">${p.fullName}</div>
+            <div class="small">${p.email}</div>
+            <div class="small">Department: ${p.department||'-'}</div>
+            <div class="small">Course: ${p.course||'-'}</div>
+            <div class="small">Payment: <strong>${p.paymentStatus||'Not Paid'}</strong></div>
+          </div>
+        </div>
+
+        <hr style="margin:12px 0">
+
+        <div><strong>Details:</strong></div>
+        <div class="small">Age: ${p.age||'-'} | Gender: ${p.gender||'-'} | Disability: ${p.disability||'No'}</div>
+        <div class="small">Skills: ${p.skills||' - '}</div>
+        <div style="margin-top:8px">
+          <a class="link" href="${p.uploads?.olevelURL || '#'}" target="_blank">${p.uploads?.olevelURL ? 'View O-Level' : 'No O-Level uploaded'}</a> |
+          <a class="link" href="${p.uploads?.certificateURL || '#'}" target="_blank">${p.uploads?.certificateURL ? 'View Certificate' : 'No Certificate'}</a>
+        </div>
+      `;
+      payInfo.textContent = `Course fee: ₦20,000 (example). Payment status: ${p.paymentStatus || 'Not Paid'}`;
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', async ()=>{
+      await logout(); location.href = 'login.html';
+    });
+
+    document.getElementById('payBtn').addEventListener('click', ()=>{
+      if(!profile) return alert('Profile not loaded');
+      const email = profile.email;
+      const amount = 20000;
+      payWithPaystack(email, amount, `ATC-${uid}-${Date.now()}`);
+    });
+  </script>
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+</body>
+</html>
